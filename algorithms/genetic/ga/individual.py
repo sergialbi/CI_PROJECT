@@ -65,20 +65,3 @@ def rank():
     Rank the individual.
     """
     pass
-
-if __name__ == "__main__":
-    env = gym.make('BipedalWalker-v3')
-    env.seed(256)
-    env.reset()
-
-    population = [Individual() for _ in range(POPULATION_SIZE)]
-    results = []
-    #get action_space
-    for _ in range(GENERATIONS):
-        for i in range(len(population)):
-            result = run_individual(population[i])
-            results.append(result)
-        #ranking of better results 
-        #crossOver
-        #mutation
-    env.close()

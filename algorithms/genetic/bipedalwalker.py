@@ -8,7 +8,7 @@ import gym
 import numpy as np
 import torch
 import torch.distributions as tdist
-
+import threading
 env = gym.make('BipedalWalker-v3')
 env.seed(123)
 
@@ -154,8 +154,9 @@ def generation(old_population, new_population, render=False):
     :param old_population: list of old individuals
     :param new_population: list of new individuals (passed by reference
     """
+    parent1, parent2 = selection(old_population)
+
     for i in range(0, len(old_population) - 1, 2):
-        parent1, parent2 = selection(old_population)
 
         ### STEP 1: CROSSOVER ###
         child1 = copy.deepcopy(parent1)
@@ -190,12 +191,16 @@ def walker_main():
         [individual.compute_fitness() for individual in old_population]
         generation(old_population, new_population)
 
+
+        if g % 10 == 0:
+            best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
+            run_individual(best_model.model, num_episodes=EPISODES, render=True)
         mean, min, max = compute_stats(new_population)
         old_population = copy.deepcopy(new_population)
         stats = f"Mean: {mean}\tmin: {min}\tmax: {max}\n"
         with open(path + '.log', "a") as f:
             f.write(stats)
-        print(stats)
+        print("Generation: ", g, stats)
 
     best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
     run_individual(best_model.model, num_episodes=EPISODES, render=True)

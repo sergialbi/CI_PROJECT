@@ -3,8 +3,8 @@
 ###############################################################################
 
 # ----------- NAMES ----------- #
-WALKER = "BipedalWalker"
-BREAKOUT = "Breakout"
+WALKER = "BipedalWalker"    # Requires: pip install box2d
+BREAKOUT = "Breakout-v0"    # Requires: pip install gym[atari,accept-rom-license]==0.21.0 (https://stackoverflow.com/questions/69442971/error-in-importing-environment-openai-gym)
 
 
 # ----------- PATHS ----------- #

@@ -1,5 +1,7 @@
 from constants.constants_general import *
 from algorithms.genetic.genetic_main import run_genetic
+from algorithms.dqn.dqn import run_dqn
+
 
 if __name__ == '__main__':
     # Select the algorithm to run
@@ -24,14 +26,14 @@ if __name__ == '__main__':
                 print("Not a valid option\n")
         
         if g == "w":
-            game = WALKER
+            game_name = WALKER
         elif g == "b":
-            game = BREAKOUT
+            game_name = BREAKOUT
         
         if val == 1:
-            pass
+            run_dqn(game_name)
         elif val == 2:
             pass
         elif val == 3:
-            run_genetic(game)
+            run_genetic(game_name)
         

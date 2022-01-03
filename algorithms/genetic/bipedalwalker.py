@@ -8,7 +8,6 @@ import gym
 import numpy as np
 import torch
 import torch.distributions as tdist
-import threading
 env = gym.make('BipedalWalker-v3')
 env.seed(123)
 

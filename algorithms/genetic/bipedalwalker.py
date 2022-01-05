@@ -93,7 +93,7 @@ def parameter_list_to_state_dict(model_dict, model_parameters):
     return OrderedDict((key, value) for (key, value) in zip(model_dict.keys(), model_values))
 
 
-def crossover(parent1_wb, parent2_wb):
+def crossover(parent1_wb, parent2_wb, p_cross=CROSSOVER_RATE):
     """
     Perform a single point crossover operation
     :param parent1_wb: weights and biases for one of the parents
@@ -102,10 +102,10 @@ def crossover(parent1_wb, parent2_wb):
     position = np.random.randint(0, parent1_wb.shape[0])
     child1_wb = parent1_wb.clone()
     child2_wb = parent2_wb.clone()
-
-    tmp = child1_wb[:position].clone()
-    child1_wb[:position] = child2_wb[:position]
-    child2_wb[:position] = tmp
+    if np.random.rand() < p_cross:
+        tmp = child1_wb[:position].clone()
+        child1_wb[:position] = child2_wb[:position]
+        child2_wb[:position] = tmp
     return child1_wb, child2_wb
 
 def mutation(parent_wb, p=MUTATION_RATE):
@@ -191,7 +191,7 @@ def walker_main():
         generation(old_population, new_population)
 
 
-        if g % 10 == 0:
+        if g % 100 == 0:
             best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
             run_individual(best_model.model, num_episodes=EPISODES, render=True)
         mean, min, max = compute_stats(new_population)

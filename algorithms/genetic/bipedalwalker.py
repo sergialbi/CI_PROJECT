@@ -50,7 +50,7 @@ def run_individual(model, num_episodes=EPISODES, render=False):
     """
     obs = env.reset()
     fitness = 0
-    for e in range(num_episodes):
+    for _ in range(num_episodes):
         if render:
             env.render()
         obs = torch.from_numpy(obs).float()
@@ -199,10 +199,10 @@ def walker_main():
         stats = f"Mean: {mean}\tmin: {min}\tmax: {max}\n"
         with open(path + '.log', "a") as f:
             f.write(stats)
+            f.close()
         print("Generation: ", g, stats)
 
     best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
     run_individual(best_model.model, num_episodes=EPISODES, render=True)
     torch.save(best_model.model, path + '.pt')
-
     env.close()

@@ -8,16 +8,17 @@ from algorithms.genetic.ga.individual import Individual
 from constants.constants_genetic import *
 from constants.constants_general import *
 
-env = gym.make('Breakout-v0')
+env = gym.make('Breakout-v0', render_mode='human')
 env.seed(123)
 
-class Breakout_Individual(Individual):
+
+class Individual:
     def __init__(self, model=None):
         if model is not None:
             self.model = model
         else:
             # sizes of the layers
-            input_layer, hidden_layer, output_layer = 24, 16, 4
+            input_layer, hidden_layer, output_layer = 3, 33600, 4
             self.model = create_model(input_layer, hidden_layer, output_layer)
         
         self.fitness = 0.0
@@ -82,8 +83,10 @@ def run_individual(model, num_episodes=EPISODES, render=False):
             env.render()
         obs = torch.from_numpy(obs).float()
         action = model(obs)
-        action = action.detach().numpy()
-        obs, reward, done, _ = env.step(action)
+        action = action.detach().numpy()[0][0]
+        print(action)
+        print()
+        obs, reward, done, info = env.step(action)
         fitness += reward
         if done:
             break
@@ -207,8 +210,7 @@ def generation(old_population, new_population, render=False):
 
 
 def breakout_main():
-    """
-    path = f'{PATH_RESULTS_GENETIC_BREAKOUT}_POPULATION={POPULATION_SIZE}_MAX-GEN={GENERATIONS}_MUT-RATE_{MUTATION_RATE}'
+    path = f'{PATH_RESULTS_GENETIC_BREAKOUT}POPULATION={POPULATION_SIZE}_MAX-GEN={GENERATIONS}_MUT-RATE_{MUTATION_RATE}'
 
     old_population = [Individual() for _ in range(POPULATION_SIZE)]
     new_population = [None] * POPULATION_SIZE
@@ -234,6 +236,8 @@ def breakout_main():
     """
     obs = env.reset()
     print(len(np.ndarray.flatten(obs)))
-    print(env.action_space.shape)
+    print(env.action_space)
     print(env.observation_space.shape)
+    for i in range(1000):
+        env.render()"""
     env.close()    

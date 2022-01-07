@@ -15,10 +15,14 @@ def environment_worker_function(env_function, pipe_end, **env_params):
 
         elif msg == "step":
             action = data
-            reward, next_state, terminal = environment.step(action)
+            next_state, reward, terminal = environment.step(action)
             if terminal:
                 next_state = environment.start()
-            pipe_end.send(("step", (reward, next_state, terminal)))
+            pipe_end.send(("step", (next_state, reward, terminal)))
+
+        elif msg == "random_action":
+            random_action = environment.random_action()
+            pipe_end.send("random_action", random_action)
 
         elif msg == "end":
             pipe_end.close()
@@ -90,18 +94,30 @@ class MultiEnvironmentManager:
         for pipe_main, action in zip(self.pipes_main, actions):
             pipe_main.send(("step", action))
 
+        next_states = np.zeros((self.num_envs, *self.state_shape))
         rewards = np.zeros((self.num_envs))
         terminals = np.zeros((self.num_envs), dtype = bool)
-        next_states = np.zeros((self.num_envs, *self.state_shape))
 
         for i in range(len(self.pipes_main)):
             (_, data) = self.pipes_main[i].recv()
-            (reward, next_state, terminal) = data
+            (next_state, reward, terminal) = data
+            next_states[i] = next_state
             rewards[i] = reward
             terminals[i] = terminal
-            next_states[i] = next_state
 
-        return rewards, next_states, terminals
+        return next_states, rewards, terminals
+
+    
+    def random_actions(self):
+        for pipe_main in self.pipes_main:
+            pipe_main.send(("random_action", None))
+
+        actions = []
+        for pipe_main in self.pipes_main:
+            (_, action) = pipe_main.recv()
+            actions.append(action)
+
+        return actions
 
 
     def get_state_shape(self):

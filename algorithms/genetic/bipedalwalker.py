@@ -182,7 +182,7 @@ def generation(old_population, new_population, render=False):
 
 def walker_main():
 
-    path = f'{PATH_RESULTS_GENETIC_WALKER}_POPULATION={POPULATION_SIZE}_MAX-GEN={GENERATIONS}_MUT-RATE_{MUTATION_RATE}'
+    path = f'{PATH_RESULTS_GENETIC_WALKER}POPULATION={POPULATION_SIZE}_MAX-GEN={GENERATIONS}_MUT-RATE_{MUTATION_RATE}'
 
     old_population = [Individual() for _ in range(POPULATION_SIZE)]
     new_population = [None] * POPULATION_SIZE

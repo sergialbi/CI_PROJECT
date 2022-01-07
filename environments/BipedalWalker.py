@@ -3,9 +3,10 @@ import gym
 
 class BipedalWalker:
 
-    def __init__(self, render=False):
+    def __init__(self, reward_scale, render=False):
         self.env = gym.make('BipedalWalker-v3')
         self.render = render
+        self.reward_scale = reward_scale
 
 
     def start(self):
@@ -14,7 +15,7 @@ class BipedalWalker:
     
     def step(self, action):
         next_state, reward, terminal, _ = self.env.step(action)
-        return next_state, reward, terminal
+        return next_state, reward*self.reward_scale, terminal
 
 
     def get_state_shape(self):

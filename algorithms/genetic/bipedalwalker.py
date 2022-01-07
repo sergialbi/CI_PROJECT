@@ -8,8 +8,9 @@ import gym
 import numpy as np
 import torch
 import torch.distributions as tdist
+import json
 env = gym.make('BipedalWalker-v3')
-env.seed(123)
+env.seed(256)
 
 class Individual:
     def __init__(self, model=None):
@@ -185,23 +186,37 @@ def walker_main():
 
     old_population = [Individual() for _ in range(POPULATION_SIZE)]
     new_population = [None] * POPULATION_SIZE
-
+    json_results = {}
+    max_old_fitness = -200
     for g in range(GENERATIONS):
         [individual.compute_fitness() for individual in old_population]
         generation(old_population, new_population)
 
 
-        if g % 100 == 0:
-            best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
-            run_individual(best_model.model, num_episodes=EPISODES, render=True)
+        #if g % 100 == 0:
+        best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
+        #    run_individual(best_model.model, num_episodes=EPISODES, render=True)
         mean, min, max = compute_stats(new_population)
         old_population = copy.deepcopy(new_population)
-        stats = f"Mean: {mean}\tmin: {min}\tmax: {max}\n"
+        if max > max_old_fitness:
+            max_old_fitness = max
+            # save model pytorchdict
+            torch.save(best_model.model.state_dict(), path + "_dict.pt")
+            torch.save(best_model.model, path)
+        stats = {"Mean":mean, "min": min,  "max": max}
+        stats_log = f"Mean: {mean} min: {min} max: {max}\n"
         with open(path + '.log', "a") as f:
-            f.write(stats)
+            f.write(stats_log)
             f.close()
         print("Generation: ", g, stats)
-
+        json_results[str(g)] = stats
+    
+    
+    # ------ Save the results ------
+    
+    with open(path + '.json', 'w') as f:
+        json.dump(json_results, f)
+        f.close()
     best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
     run_individual(best_model.model, num_episodes=EPISODES, render=True)
     torch.save(best_model.model, path + '.pt')

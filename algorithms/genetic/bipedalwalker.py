@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import torch.distributions as tdist
 import json
-env = gym.make('BipedalWalker-v3')
+env = gym.make(WALKER)
 env.seed(256)
 
 class Individual:

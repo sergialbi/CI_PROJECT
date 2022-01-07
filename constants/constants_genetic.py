@@ -3,8 +3,8 @@
 ###############################################################################
 
 
-GENERATIONS = 100
-POPULATION_SIZE = 500
+GENERATIONS = 6000
+POPULATION_SIZE = 100
 MUTATION_RATE = 0.6
-CROSSOVER_RATE = 0.5
-EPISODES = 100
+CROSSOVER_RATE = 0.85
+EPISODES = 500

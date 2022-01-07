@@ -50,7 +50,7 @@ def run_individual(model, num_episodes=EPISODES, render=False):
     """
     obs = env.reset()
     fitness = 0
-    for e in range(num_episodes):
+    for _ in range(num_episodes):
         if render:
             env.render()
         obs = torch.from_numpy(obs).float()
@@ -93,7 +93,7 @@ def parameter_list_to_state_dict(model_dict, model_parameters):
     return OrderedDict((key, value) for (key, value) in zip(model_dict.keys(), model_values))
 
 
-def crossover(parent1_wb, parent2_wb):
+def crossover(parent1_wb, parent2_wb, p_cross=CROSSOVER_RATE):
     """
     Perform a single point crossover operation
     :param parent1_wb: weights and biases for one of the parents
@@ -102,10 +102,10 @@ def crossover(parent1_wb, parent2_wb):
     position = np.random.randint(0, parent1_wb.shape[0])
     child1_wb = parent1_wb.clone()
     child2_wb = parent2_wb.clone()
-
-    tmp = child1_wb[:position].clone()
-    child1_wb[:position] = child2_wb[:position]
-    child2_wb[:position] = tmp
+    if np.random.rand() < p_cross:
+        tmp = child1_wb[:position].clone()
+        child1_wb[:position] = child2_wb[:position]
+        child2_wb[:position] = tmp
     return child1_wb, child2_wb
 
 def mutation(parent_wb, p=MUTATION_RATE):
@@ -181,7 +181,7 @@ def generation(old_population, new_population, render=False):
 
 def walker_main():
 
-    path = f'{PATH_RESULTS_GENETIC_WALKER}_POPULATION={POPULATION_SIZE}_MAX-GEN={GENERATIONS}_MUT-RATE_{MUTATION_RATE}'
+    path = f'{PATH_RESULTS_GENETIC_WALKER}POPULATION={POPULATION_SIZE}_MAX-GEN={GENERATIONS}_MUT-RATE_{MUTATION_RATE}'
 
     old_population = [Individual() for _ in range(POPULATION_SIZE)]
     new_population = [None] * POPULATION_SIZE
@@ -191,7 +191,7 @@ def walker_main():
         generation(old_population, new_population)
 
 
-        if g % 10 == 0:
+        if g % 100 == 0:
             best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
             run_individual(best_model.model, num_episodes=EPISODES, render=True)
         mean, min, max = compute_stats(new_population)
@@ -199,10 +199,10 @@ def walker_main():
         stats = f"Mean: {mean}\tmin: {min}\tmax: {max}\n"
         with open(path + '.log', "a") as f:
             f.write(stats)
+            f.close()
         print("Generation: ", g, stats)
 
     best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
     run_individual(best_model.model, num_episodes=EPISODES, render=True)
     torch.save(best_model.model, path + '.pt')
-
     env.close()

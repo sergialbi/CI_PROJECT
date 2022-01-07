@@ -155,6 +155,10 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
         # When epoch completed, store reward
         epochs_rewards.append(epoch_reward)
         #plot_rewards(epochs_rewards)    # TODO: Maybe remove this if Visual Studio keeps failing plotting
+
+        # Store current model
+        torch.save(policy_net.state_dict(), "dqn_policy_net.h5")
+        torch.save(target_net.state_dict(), "dqn_target_net.h5")
             
         # Update the target network, copying all weights and biases in DQN
         if epoch % epochs_per_target_upd == 0:
@@ -164,7 +168,7 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
         print(f"Epoch {epoch+1}/{num_epochs} | {steps_done} steps done and a reward of {epoch_reward}")
 
     #plt.show() # TODO: Remove this if plot_rewards if removed
-    
+
 
     epochs_rewards = np.array(epochs_rewards)
     return epochs_rewards

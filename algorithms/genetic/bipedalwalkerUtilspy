@@ -1,5 +1,7 @@
+import json
 import gym
 import torch
+import matplotlib.pyplot as plt
 from constants.constants_general import *
 from constants.constants_genetic import EPISODES
 
@@ -29,11 +31,25 @@ def run_walker(path, episodes=EPISODES, render=False):
     return reward
 
 
-def plotStatistics(path):
+def plotStatisticsfromPath(path):
     """
     Plot statistics of the evolution of the population
     """
-    # canviar format sobre com es guarda la merda aquesta.    
-    
+    data = json.load(path)
+    plotStatistics(data)
 
 
+def plotStatistics(data):
+    """
+    Plot statistics of the evolution of the population
+    """
+    min, mean, max = [], [], []
+    for i in data.keys():
+        min.append(data[i]['min'])
+        mean.append(data[i]['mean'])
+        max.append(data[i]['max'])
+    plt.plot(min, label='min')
+    plt.plot(mean, label='mean')
+    plt.plot(max, label='max')
+    plt.legend()
+    plt.show()

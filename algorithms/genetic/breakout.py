@@ -3,6 +3,8 @@ import torch
 import torch.distributions as tdist
 import gym
 import copy
+import json
+import genetic_utils
 from collections import OrderedDict
 from algorithms.genetic.ga.individual import Individual
 from constants.constants_genetic import *
@@ -214,7 +216,8 @@ def breakout_main():
 
     old_population = [Individual() for _ in range(POPULATION_SIZE)]
     new_population = [None] * POPULATION_SIZE
-
+    results = {}
+    max_fitness = -500
     for g in range(GENERATIONS):
         [individual.compute_fitness() for individual in old_population]
         generation(old_population, new_population)
@@ -225,14 +228,27 @@ def breakout_main():
             run_individual(best_model.model, num_episodes=EPISODES, render=True)
         mean, min, max = compute_stats(new_population)
         old_population = copy.deepcopy(new_population)
+        results[str(g)] = {'mean': mean, 'min': min, 'max': max}
         stats = f"Mean: {mean}\tmin: {min}\tmax: {max}\n"
         with open(path + '.log', "a") as f:
             f.write(stats)
         print("Generation: ", g, stats)
+        if max > max_fitness:
+            max_fitness = max
+            best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
+            torch.save(best_model.model.state_dict(), path + '.pth')
 
     best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
     run_individual(best_model.model, num_episodes=EPISODES, render=True)
     torch.save(best_model.model, path + '.pt')
+    with open(path + '.log', "a") as f:
+            f.write(stats)
+
+    with open(path + '.json', "a") as f:
+        json.dump(results, f)
+
+    genetic_utils.plotStatistics(results, BREAKOUT)
+
     """
     obs = env.reset()
     print(len(np.ndarray.flatten(obs)))

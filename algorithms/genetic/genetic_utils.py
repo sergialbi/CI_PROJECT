@@ -39,7 +39,7 @@ def plotStatisticsfromPath(path):
     plotStatistics(data)
 
 
-def plotStatistics(data):
+def plotStatistics(data, game):
     """
     Plot statistics of the evolution of the population
     """
@@ -52,4 +52,4 @@ def plotStatistics(data):
     plt.plot(mean, label='mean')
     plt.plot(max, label='max')
     plt.legend()
-    plt.savefig(PATH_RESULTS_GENETIC_WALKER + '/results.png')
+    plt.savefig(PATH_RESULTS_GENETIC_WALKER + '/results_{game}.png')

@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.distributions as tdist
 import json
+import genetic_utils
 env = gym.make(WALKER)
 env.seed(256)
 
@@ -220,4 +221,6 @@ def walker_main():
     best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
     run_individual(best_model.model, num_episodes=EPISODES, render=True)
     torch.save(best_model.model, path + '.pt')
+    genetic_utils.plotStatistics(json_results, WALKER)
+
     env.close()

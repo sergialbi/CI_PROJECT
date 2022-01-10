@@ -4,12 +4,12 @@ from skimage.color import rgb2gray
 from collections import deque
 import random
 import numpy as np
-
+from constants.constants_general import BREAKOUT
 
 class Breakout:
 
     def __init__(self, num_stacked, frame_resize, noop_actions=10, reward_scale=0.01, render=False):
-        self.env = gym.make('BreakoutDeterministic-v4')
+        self.env = gym.make(BREAKOUT)
         self.render = render
         
         self.reward_scale = reward_scale

@@ -1,11 +1,12 @@
 import json
 import gym
 import torch
+import bigjson
 import matplotlib.pyplot as plt
 from constants.constants_general import *
 from constants.constants_genetic import EPISODES
 
-def run_walker(path, episodes=EPISODES, render=False):
+def run_walker(path, episodes=EPISODES, render=True):
     """
     Execute the walker environment with best model
     @param path: path to the model
@@ -31,12 +32,13 @@ def run_walker(path, episodes=EPISODES, render=False):
     return reward
 
 
-def plotStatisticsfromPath(path):
+def plotStatisticsfromPath(path, game):
     """
     Plot statistics of the evolution of the population
     """
-    data = json.load(path)
-    plotStatistics(data)
+    with open(path, 'r') as f:
+        data = json.load(f)
+    plotStatistics(data, game)
 
 
 def plotStatistics(data, game):
@@ -52,4 +54,10 @@ def plotStatistics(data, game):
     plt.plot(mean, label='mean')
     plt.plot(max, label='max')
     plt.legend()
-    plt.savefig(PATH_RESULTS_GENETIC_WALKER + '/results_{game}.png')
+    if game == WALKER:
+        plt.savefig(PATH_RESULTS_GENETIC_WALKER + '\\results.png')
+    else:
+        plt.savefig(PATH_RESULTS_GENETIC_BREAKOUT +'\\results.png')
+
+
+    

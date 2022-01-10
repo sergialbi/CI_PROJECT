@@ -9,7 +9,10 @@ import numpy as np
 import torch
 import torch.distributions as tdist
 import json
-import genetic_utils
+import algorithms.genetic.genetic_utils as genetic_utils
+from environments.BipedalWalker import BipedalWalker
+
+bipedalWalker = BipedalWalker(0.1)
 env = gym.make(WALKER)
 env.seed(256)
 
@@ -50,15 +53,14 @@ def run_individual(model, num_episodes=EPISODES, render=False):
     :param render: bolean to decide to render or not the game
     :return: fitness and the parameters of the model
     """
-    obs = env.reset()
+    obs = bipedalWalker.start()
     fitness = 0
     for _ in range(num_episodes):
-        if render:
-            env.render()
+        
         obs = torch.from_numpy(obs).float()
         action = model(obs)
         action = action.detach().numpy()
-        obs, reward, done, _ = env.step(action)
+        obs, reward, done= bipedalWalker.step(action)
         fitness += reward
         if done:
             break
@@ -203,8 +205,8 @@ def walker_main():
             max_old_fitness = max
             # save model pytorchdict
             torch.save(best_model.model.state_dict(), path + "_dict.pt")
-            torch.save(best_model.model, path)
-        stats = {"Mean":mean, "min": min,  "max": max}
+            torch.save(best_model.model, path + "_model.pt")
+        stats = {"mean":mean, "min": min,  "max": max}
         stats_log = f"Mean: {mean} min: {min} max: {max}\n"
         with open(path + '.log', "a") as f:
             f.write(stats_log)
@@ -220,7 +222,6 @@ def walker_main():
         f.close()
     best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
     run_individual(best_model.model, num_episodes=EPISODES, render=True)
-    torch.save(best_model.model, path + '.pt')
     genetic_utils.plotStatistics(json_results, WALKER)
 
-    env.close()
+    bipedalWalker.end()

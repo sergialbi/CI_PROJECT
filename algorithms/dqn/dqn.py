@@ -91,7 +91,7 @@ def get_screen_batch(env, device=DEVICE):
     screen = torch.from_numpy(screen)
 
     # Resize and add a batch dimension (BCHW)
-    return resize_func(screen).unsqueeze(0).to(device)
+    return resize_func(screen).unsqueeze(0)
 
 
 def plot_screen_batch(screen, title=""):
@@ -147,7 +147,7 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
             _, reward, done = env.step(action.item())
             steps_done += 1
             epoch_reward += reward
-            reward = torch.tensor([reward], device=device)
+            reward = torch.tensor([reward])
 
             # Observe new state
             last_screen = current_screen
@@ -179,12 +179,13 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
     return epochs_rewards
 
 
-def select_action(state, policy_net):
+def select_action(state, policy_net, device=DEVICE):
     with torch.no_grad():
+        state_at_device = state.to(device)
         # t.max(1) will return largest column value of each row.
         # second column on max result is index of where max element was
         # found, so we pick action with the larger expected reward.
-        return policy_net(state).max(1)[1].view(1, 1)
+        return policy_net(state_at_device).max(1)[1].view(1, 1)
 
 
 def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):
@@ -202,9 +203,9 @@ def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):
                                           batch.next_state)), device=device, dtype=torch.bool)
     non_final_next_states = torch.cat([s for s in batch.next_state
                                                 if s is not None])
-    state_batch = torch.cat(batch.state)
+    state_batch = torch.cat(batch.state).to(device)
     action_batch = torch.cat(batch.action)
-    reward_batch = torch.cat(batch.reward)
+    reward_batch = torch.cat(batch.reward).to(device)
 
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken. These are the actions which would've been taken
@@ -217,6 +218,7 @@ def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
     next_state_values = torch.zeros(BATCH_SIZE, device=device)
+    non_final_next_states = non_final_next_states.to(device)
     next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0].detach()
     # Compute the expected Q values
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
@@ -233,7 +235,7 @@ def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):
 
 
 # ----------- RESULTS ----------- #
-def store_rewards(results, game_name):
+def store_rewards(rewards, game_name):
     # Get folder
     folder = ""
     if game_name == WALKER:
@@ -250,17 +252,23 @@ def store_rewards(results, game_name):
     path = os.path.join(folder, filename)
 
     # Store
-    np.save(path, results)
+    np.save(path, rewards)
 
     return path
 
 
-def plot_rewards(results, game_name):    
-    plt.plot(results)
-    plt.title(f"Rewards for {game_name}")
+def plot_rewards(rewards, title):
+    plt.plot(rewards)
+    plt.title(f"Rewards for {title}")
     plt.xlabel("Epoch")
     plt.ylabel("Reward")
     plt.show()
+
+
+def plot_rewards_from_file(filepath):
+    filename = os.path.basename(filepath)
+    results = np.load(filepath)
+    plot_rewards(results, filename)
 
 
 # ----------- RUNNING METHOD ----------- #
@@ -275,11 +283,17 @@ def run_dqn(game_name):
 
     # Perform procedure
     print(f"Selected device = {DEVICE}")
+
     print("Creating model...")
     dqn_tuple = create_dqn(env)
+    
     print("Training...")
     rewards = train_dqn(dqn_tuple, env)
+    
+    print("Storing rewards...")
     store_rewards(rewards, game_name)
+    
+    print("Plotting rewards...")
     plot_rewards(rewards, game_name)
 
 

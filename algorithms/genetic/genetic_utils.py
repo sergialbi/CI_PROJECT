@@ -53,3 +53,4 @@ def plotStatistics(data, game):
     plt.plot(max, label='max')
     plt.legend()
     plt.savefig(PATH_RESULTS_GENETIC_WALKER + '/results_{game}.png')
+    

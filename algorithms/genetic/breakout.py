@@ -4,14 +4,14 @@ import torch.distributions as tdist
 import gym
 import copy
 import json
-import genetic_utils
+import algorithms.genetic.genetic_utils as genetic_utils
 from collections import OrderedDict
 from algorithms.genetic.ga.individual import Individual
 from constants.constants_genetic import *
 from constants.constants_general import *
-
-env = gym.make('Breakout-v0', render_mode='human')
-env.seed(123)
+from environments.Breakout import Breakout
+from environments.Breakout import Breakout
+breakout = Breakout(4, (100,100))
 
 
 class Individual:
@@ -78,17 +78,14 @@ def run_individual(model, num_episodes=EPISODES, render=False):
     :param render: bolean to decide to render or not the game
     :return: fitness and the parameters of the model
     """
-    obs = env.reset()
+    obs = breakout.start()
     fitness = 0
-    for e in range(num_episodes):
-        if render:
-            env.render()
+    for _ in range(num_episodes):
         obs = torch.from_numpy(obs).float()
+        print(obs.shape)
         action = model(obs)
-        action = action.detach().numpy()[0][0]
-        print(action)
-        print()
-        obs, reward, done, info = env.step(action)
+        action = action.detach().numpy()
+        obs, reward, done, _ = breakout.step(action)
         fitness += reward
         if done:
             break
@@ -221,11 +218,6 @@ def breakout_main():
     for g in range(GENERATIONS):
         [individual.compute_fitness() for individual in old_population]
         generation(old_population, new_population)
-
-
-        if g % 10 == 0:
-            best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
-            run_individual(best_model.model, num_episodes=EPISODES, render=True)
         mean, min, max = compute_stats(new_population)
         old_population = copy.deepcopy(new_population)
         results[str(g)] = {'mean': mean, 'min': min, 'max': max}
@@ -236,11 +228,9 @@ def breakout_main():
         if max > max_fitness:
             max_fitness = max
             best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
-            torch.save(best_model.model.state_dict(), path + '.pth')
+            torch.save(best_model.model.state_dict(), path + '_dict.pt')
+            torch.save(best_model.model, path + '.pt')
 
-    best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
-    run_individual(best_model.model, num_episodes=EPISODES, render=True)
-    torch.save(best_model.model, path + '.pt')
     with open(path + '.log', "a") as f:
             f.write(stats)
 
@@ -248,12 +238,4 @@ def breakout_main():
         json.dump(results, f)
 
     genetic_utils.plotStatistics(results, BREAKOUT)
-
-    """
-    obs = env.reset()
-    print(len(np.ndarray.flatten(obs)))
-    print(env.action_space)
-    print(env.observation_space.shape)
-    for i in range(1000):
-        env.render()"""
-    env.close()    
+    breakout.end()

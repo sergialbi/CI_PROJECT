@@ -1,10 +1,10 @@
 import gym
-
+from constants.constants_general import WALKER
 
 class BipedalWalker:
 
     def __init__(self, reward_scale, render=False):
-        self.env = gym.make('BipedalWalker-v3')
+        self.env = gym.make(WALKER)
         self.render = render
         self.reward_scale = reward_scale
 

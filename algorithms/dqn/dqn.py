@@ -1,11 +1,10 @@
-import gym
-import math
+import os
+import time
 import random
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from collections import namedtuple
-from itertools import count
 from PIL import Image
 
 is_ipython = 'inline' in matplotlib.get_backend()
@@ -20,6 +19,8 @@ import torchvision.transforms as T
 
 from constants.constants_general import *
 from constants.constants_dqn import *
+from environments.BipedalWalker import BipedalWalker
+from environments.Breakout import Breakout
 
 
 # ----------- MODEL AND MEMORY ----------- #
@@ -78,11 +79,11 @@ class ReplayMemory(object):
 
 # ----------- CREATION ----------- #
 resize_func = T.Compose([T.ToPILImage(),
-                        T.Resize(64, interpolation=Image.CUBIC),
+                        T.Resize(FRAME_SIZE[0], interpolation=Image.CUBIC),
                         T.ToTensor()])
 def get_screen_batch(env, device=DEVICE):
     # Get environment screen and transpose it into PyTorch order (CHW = Channels, Height, Width).
-    screen = env.render(mode='rgb_array').transpose((2, 0, 1))
+    screen = env.env.render(mode='rgb_array').transpose((2, 0, 1))
 
     # Convert to float, rescale, convert to torch tensor
     # (this doesn't require a copy)
@@ -93,11 +94,23 @@ def get_screen_batch(env, device=DEVICE):
     return resize_func(screen).unsqueeze(0).to(device)
 
 
+def plot_screen_batch(screen, title=""):
+    img = screen[0].cpu().detach().numpy().transpose(1,2,0)
+    plt.imshow(img)
+    plt.title(title)
+    plt.show()
+
+
 def create_dqn(env, memory_size=MEMORY_SIZE, device=DEVICE):
     # Extract screen dimensions (after resizing) and number of actions from environment
     screen_shape = get_screen_batch(env)[0].detach().cpu().numpy().transpose((1, 2, 0)).shape
     screen_height, screen_width = screen_shape[0], screen_shape[1]
-    n_actions = env.action_space.n
+    #plot_screen_batch(get_screen_batch(env), "Example of input")
+
+    # Set number of actions using the environment
+    n_actions = env.get_action_space().n
+    if isinstance(env, Breakout):
+        n_actions -= 2      # Discart NOOP and FIRE action
 
     # Create networks
     policy_net = DQN(screen_height, screen_width, n_actions).to(device)
@@ -112,16 +125,17 @@ def create_dqn(env, memory_size=MEMORY_SIZE, device=DEVICE):
     return dqn_tuple
 
 
+
 # ----------- TRAINING ----------- #
 def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCHS_PER_TARGET_UPD, device=DEVICE):
     policy_net, target_net, optimizer, memory = dqn_tuple   # Extract variables from tuple
-    policy_net.train()
-
-    steps_done = 0
-    epochs_rewards = []
+    policy_net.train()    
+    
+    epochs_rewards = np.zeros(num_epochs)
     for epoch in range(num_epochs):        
         # Initialize the environment and state
-        env.reset()
+        steps_done = 0
+        env.start()
         last_screen = get_screen_batch(env)
         current_screen = get_screen_batch(env)        
         state = current_screen - last_screen
@@ -129,9 +143,9 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
         done = False
         while not done:
             # Select and perform an action
-            action = select_action(state, policy_net, steps_done)
+            action = select_action(state, policy_net)            
+            _, reward, done = env.step(action.item())
             steps_done += 1
-            _, reward, done, _ = env.step(action.item())
             epoch_reward += reward
             reward = torch.tensor([reward], device=device)
 
@@ -153,12 +167,7 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
             optimize_model(policy_net, target_net, memory, optimizer)
 
         # When epoch completed, store reward
-        epochs_rewards.append(epoch_reward)
-        #plot_rewards(epochs_rewards)    # TODO: Maybe remove this if Visual Studio keeps failing plotting
-
-        # Store current model
-        torch.save(policy_net.state_dict(), "dqn_policy_net.h5")
-        torch.save(target_net.state_dict(), "dqn_target_net.h5")
+        epochs_rewards[epoch] = epoch_reward
             
         # Update the target network, copying all weights and biases in DQN
         if epoch % epochs_per_target_upd == 0:
@@ -167,27 +176,15 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
         # Print epoch information
         print(f"Epoch {epoch+1}/{num_epochs} | {steps_done} steps done and a reward of {epoch_reward}")
 
-    #plt.show() # TODO: Remove this if plot_rewards if removed
-
-
-    epochs_rewards = np.array(epochs_rewards)
     return epochs_rewards
 
 
-def select_action(state, policy_net, steps_done, eps_start=EPS_START, eps_end=EPS_END, eps_decay=EPS_DECAY, device=DEVICE):
-    n_actions = policy_net.get_num_outputs()
-    sample = random.random()
-    eps_threshold = eps_end + (eps_start - eps_end) * \
-        math.exp(-1. * steps_done / eps_decay)
-    
-    if sample > eps_threshold:
-        with torch.no_grad():
-            # t.max(1) will return largest column value of each row.
-            # second column on max result is index of where max element was
-            # found, so we pick action with the larger expected reward.
-            return policy_net(state).max(1)[1].view(1, 1)
-    else:
-        return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
+def select_action(state, policy_net):
+    with torch.no_grad():
+        # t.max(1) will return largest column value of each row.
+        # second column on max result is index of where max element was
+        # found, so we pick action with the larger expected reward.
+        return policy_net(state).max(1)[1].view(1, 1)
 
 
 def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):
@@ -235,38 +232,58 @@ def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):
     optimizer.step()
 
 
-def plot_rewards(epochs_rewards):
-    plt.figure(2)
-    plt.clf()
-    rewards_tensor = torch.tensor(epochs_rewards, dtype=torch.float)
-    plt.title('Training...')
-    plt.xlabel('Episode')
-    plt.ylabel('Duration')
-    plt.plot(rewards_tensor.numpy())
-    # Take 100 episode averages and plot them too
-    if len(rewards_tensor) >= 100:
-        means = rewards_tensor.unfold(0, 100, 1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(99), means))
-        plt.plot(means.numpy())
+# ----------- RESULTS ----------- #
+def store_rewards(results, game_name):
+    # Get folder
+    folder = ""
+    if game_name == WALKER:
+        folder = PATH_RESULTS_DQN_WALKER
+    elif game_name == BREAKOUT:
+        folder = PATH_RESULTS_DQN_BREAKOUT
+    
+    # Create folder if it does not exist
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    
+    # Get filename and path
+    filename = f"rewards_{game_name}_{time.strftime('%Y%m%d-%H%M%S')}.npy"
+    path = os.path.join(folder, filename)
 
-    plt.pause(0.001)  # pause a bit so that plots are updated
-    if is_ipython:
-        display.clear_output(wait=True)
-        display.display(plt.gcf())
+    # Store
+    np.save(path, results)
+
+    return path
+
+
+def plot_rewards(results, game_name):    
+    plt.plot(results)
+    plt.title(f"Rewards for {game_name}")
+    plt.xlabel("Epoch")
+    plt.ylabel("Reward")
+    plt.show()
 
 
 # ----------- RUNNING METHOD ----------- #
 def run_dqn(game_name):
-    env = gym.make(game_name).unwrapped # Unwrap for being environment agnostic
+    # Get game environment
+    if game_name == WALKER:
+        env = BipedalWalker(reward_scale=1)
+    elif game_name == BREAKOUT:
+        env = Breakout(1, FRAME_SIZE, reward_scale=1)
+    else:
+        raise Exception(f"Game name {game_name} not recognized")
 
+    # Perform procedure
+    print(f"Selected device = {DEVICE}")
     print("Creating model...")
     dqn_tuple = create_dqn(env)
     print("Training...")
-    results = train_dqn(dqn_tuple, env)
-    print(f"Results:\n{results}")
-    # TODO: Store results
+    rewards = train_dqn(dqn_tuple, env)
+    store_rewards(rewards, game_name)
+    plot_rewards(rewards, game_name)
 
-    env.close()
-    plt.ioff()
 
-    return results
+    # Close environment
+    env.end()
+
+    return rewards

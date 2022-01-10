@@ -20,7 +20,7 @@ class Individual:
             self.model = model
         else:
             # sizes of the layers
-            input_layer, hidden_layer, output_layer = 3, 33600, 4
+            input_layer, hidden_layer, output_layer = 4, 10000, 4
             self.model = create_model(input_layer, hidden_layer, output_layer)
         
         self.fitness = 0.0

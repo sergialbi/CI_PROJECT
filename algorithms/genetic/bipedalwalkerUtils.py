@@ -29,11 +29,6 @@ def run_walker(path, episodes=EPISODES, render=False):
     return reward
 
 
-def plotStatistics(path):
-    """
-    Plot statistics of the evolution of the population
-    """
-    # canviar format sobre com es guarda la merda aquesta.    
-    
+
 
 

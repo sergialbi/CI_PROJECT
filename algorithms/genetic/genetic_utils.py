@@ -4,7 +4,7 @@ import torch
 import bigjson
 import matplotlib.pyplot as plt
 from constants.constants_general import *
-from constants.constants_genetic import EPISODES
+from constants.constants_genetic import *
 
 def run_walker(path, episodes=EPISODES, render=True):
     """
@@ -41,7 +41,7 @@ def plotStatisticsfromPath(path, game):
     plotStatistics(data, game)
 
 
-def plotStatistics(data, game):
+def plotStatistics(data, game , generation=GENERATIONS, population=POPULATION_SIZE, crossOver=CROSSOVER_RATE, mutation=MUTATION_RATE):
     """
     Plot statistics of the evolution of the population
     """
@@ -55,9 +55,8 @@ def plotStatistics(data, game):
     plt.plot(max, label='max')
     plt.legend()
     if game == WALKER:
-        plt.savefig(PATH_RESULTS_GENETIC_WALKER + '\\results.png')
+        plt.savefig(PATH_RESULTS_GENETIC_WALKER +f"\\+{game}_{generation}_{population}_{crossOver}_{mutation}_ results.png")
     else:
         plt.savefig(PATH_RESULTS_GENETIC_BREAKOUT +'\\results.png')
 
 
-    

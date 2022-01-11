@@ -199,7 +199,7 @@ def walker_main():
                     max_old_fitness = -200
                     for g in range(g):
                         [individual.compute_fitness() for individual in old_population]
-                        generation(old_population, new_population)
+                        generation(old_population, new_population, cross_value=c, mut_value=m)
 
 
                         #if g % 100 == 0:

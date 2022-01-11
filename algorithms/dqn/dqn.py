@@ -1,6 +1,7 @@
 import os
 import time
 import random
+import math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -131,10 +132,10 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
     policy_net, target_net, optimizer, memory = dqn_tuple   # Extract variables from tuple
     policy_net.train()    
     
+    steps_done = 0
     epochs_rewards = np.zeros(num_epochs)
     for epoch in range(num_epochs):        
         # Initialize the environment and state
-        steps_done = 0
         env.start()
         last_screen = get_screen_batch(env)
         current_screen = get_screen_batch(env)        
@@ -143,9 +144,9 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
         done = False
         while not done:
             # Select and perform an action
-            action = select_action(state, policy_net)            
-            _, reward, done = env.step(action.item())
             steps_done += 1
+            action = select_action(state, policy_net, steps_done)
+            _, reward, done = env.step(action.item())            
             epoch_reward += reward
             reward = torch.tensor([reward])
 
@@ -174,18 +175,29 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
             target_net.load_state_dict(policy_net.state_dict())
         
         # Print epoch information
-        print(f"Epoch {epoch+1}/{num_epochs} | {steps_done} steps done and a reward of {epoch_reward}")
+        print(f"Epoch {epoch+1}/{num_epochs} with a reward of {epoch_reward}")
 
     return epochs_rewards
 
 
-def select_action(state, policy_net, device=DEVICE):
-    with torch.no_grad():
-        state_at_device = state.to(device)
-        # t.max(1) will return largest column value of each row.
-        # second column on max result is index of where max element was
-        # found, so we pick action with the larger expected reward.
-        return policy_net(state_at_device).max(1)[1].view(1, 1)
+def select_action(state, policy_net, steps_done, eps_start=EPS_START, eps_end=EPS_END, eps_decay=EPS_DECAY, device=DEVICE):
+    n_actions = policy_net.get_num_outputs()
+    sample = random.random()
+    eps_threshold = eps_end + (eps_start - eps_end) * \
+        math.exp(-1. * steps_done / eps_decay)
+    
+    # If sample is lower than epsilon threshold, perform a random action
+    if sample <= eps_threshold:
+        return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
+    else:
+        with torch.no_grad():
+            state_at_device = state.to(device)
+            # t.max(1) will return largest column value of each row.
+            # second column on max result is index of where max element was
+            # found, so we pick action with the larger expected reward.
+            return policy_net(state_at_device).max(1)[1].view(1, 1)
+
+    
 
 
 def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):

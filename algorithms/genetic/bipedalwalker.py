@@ -151,7 +151,7 @@ def selection(population):
     return parent1, parent2
 
 
-def generation(old_population, new_population, render=False):
+def generation(old_population, new_population, render=False, cross_value=CROSSOVER_RATE, mut_value = MUTATION_RATE):
     """
     Generate new population
     :param old_population: list of old individuals
@@ -165,11 +165,11 @@ def generation(old_population, new_population, render=False):
         child1 = copy.deepcopy(parent1)
         child2 = copy.deepcopy(parent2)
 
-        child1.nn_weights, child2.nn_weights = crossover(parent1.nn_weights, parent2.nn_weights)
+        child1.nn_weights, child2.nn_weights = crossover(parent1.nn_weights, parent2.nn_weights,cross_value)
 
         ### STEP 2: MUTATION ###
-        child1.nn_weights = mutation(child1.nn_weights)
-        child2.nn_weights = mutation(child2.nn_weights)
+        child1.nn_weights = mutation(child1.nn_weights, mut_value)
+        child2.nn_weights = mutation(child2.nn_weights, mut_value)
 
         ### STEP 3: UPDATE THE CURRENT MODEL ###
         child1.update_model()
@@ -184,44 +184,50 @@ def generation(old_population, new_population, render=False):
 
 
 def walker_main():
+    crossover_list = [0.3, 0.5, 0.85]
+    mutation_list = [0.2, 0.5, 0.8]
+    population_list = [10, 20, 50]
+    generation_list = [25, 100, 500]
+    for p in population_list:
+        for g in generation_list:
+            for c in crossover_list:
+                for m in mutation_list:
+                    path = os.path.join(PATH_RESULTS_GENETIC_WALKER,f'POPULATION={p}_MAX-GEN={g}_CROS_RATE={c}_MUT-RATE_{m}')  
+                    old_population = [Individual() for _ in range(p)]
+                    new_population = [None] * p
+                    json_results = {}
+                    max_old_fitness = -200
+                    for g in range(g):
+                        [individual.compute_fitness() for individual in old_population]
+                        generation(old_population, new_population, cross_value=c, mut_value=m)
 
-    path = f'{PATH_RESULTS_GENETIC_WALKER}POPULATION={POPULATION_SIZE}_MAX-GEN={GENERATIONS}_MUT-RATE_{MUTATION_RATE}'
 
-    old_population = [Individual() for _ in range(POPULATION_SIZE)]
-    new_population = [None] * POPULATION_SIZE
-    json_results = {}
-    max_old_fitness = -200
-    for g in range(GENERATIONS):
-        [individual.compute_fitness() for individual in old_population]
-        generation(old_population, new_population)
-
-
-        #if g % 100 == 0:
-        best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
-        #    run_individual(best_model.model, num_episodes=EPISODES, render=True)
-        mean, min, max = compute_stats(new_population)
-        old_population = copy.deepcopy(new_population)
-        if max > max_old_fitness:
-            max_old_fitness = max
-            # save model pytorchdict
-            torch.save(best_model.model.state_dict(), path + "_dict.pt")
-            torch.save(best_model.model, path + "_model.pt")
-        stats = {"mean":mean, "min": min,  "max": max}
-        stats_log = f"Mean: {mean} min: {min} max: {max}\n"
-        with open(path + '.log', "a") as f:
-            f.write(stats_log)
-            f.close()
-        print("Generation: ", g, stats)
-        json_results[str(g)] = stats
-    
-    
-    # ------ Save the results ------
-    
-    with open(path + '.json', 'w') as f:
-        json.dump(json_results, f)
-        f.close()
-    best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
-    run_individual(best_model.model, num_episodes=EPISODES, render=True)
-    genetic_utils.plotStatistics(json_results, WALKER)
+                        #if g % 100 == 0:
+                        best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
+                        #    run_individual(best_model.model, num_episodes=EPISODES, render=True)
+                        mean, min, max = compute_stats(new_population)
+                        old_population = copy.deepcopy(new_population)
+                        if max > max_old_fitness:
+                            max_old_fitness = max
+                            # save model pytorchdict
+                            torch.save(best_model.model.state_dict(), path + "_dict.pt")
+                            torch.save(best_model.model, path + "_model.pt")
+                        stats = {"mean":mean, "min": min,  "max": max}
+                        stats_log = f"Mean: {mean} min: {min} max: {max}\n"
+                        with open(path + '.log', "a") as f:
+                            f.write(stats_log)
+                            f.close()
+                        print("Generation: ", g, stats)
+                        json_results[str(g)] = stats
+                    
+                    
+                    # ------ Save the results ------
+                    
+                    with open(path + '.json', 'w') as f:
+                        json.dump(json_results, f)
+                        f.close()
+                    best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
+                    run_individual(best_model.model, num_episodes=EPISODES, render=True)
+                    genetic_utils.plotStatistics(json_results, WALKER, g, p, c, m)
 
     bipedalWalker.end()

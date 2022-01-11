@@ -10,9 +10,9 @@ import torch
 import torch.distributions as tdist
 import json
 import algorithms.genetic.genetic_utils as genetic_utils
-from environments.BipedalWalker import BipedalWalker
+from environments.CartPole import CartPole
 
-bipedalWalker = BipedalWalker(0.1)
+cartPole = CartPole(0.1)
 
 class Individual:
     def __init__(self, model=None):
@@ -20,7 +20,7 @@ class Individual:
             self.model = model
         else:
             # sizes of the layers
-            input_layer, hidden_layer, output_layer = 24, 16, 4
+            input_layer, hidden_layer, output_layer = 4, 2, 1
             self.model = create_model(input_layer, hidden_layer, output_layer)
         
         self.fitness = 0.0
@@ -51,14 +51,14 @@ def run_individual(model, num_episodes=EPISODES, render=False):
     :param render: bolean to decide to render or not the game
     :return: fitness and the parameters of the model
     """
-    obs = bipedalWalker.start()
+    obs = cartPole.start()
     fitness = 0
     for _ in range(num_episodes):
         
         obs = torch.from_numpy(obs).float()
         action = model(obs)
         action = action.detach().numpy()
-        obs, reward, done= bipedalWalker.step(action)
+        obs, reward, done= cartPole.step(round(action.item()))
         fitness += reward
         if done:
             break
@@ -181,16 +181,18 @@ def generation(old_population, new_population, render=False, cross_value=CROSSOV
         new_population[i + 1] = child2
 
 
-def walker_main():
-    crossover_list = [0.3, 0.5, 0.85]
-    mutation_list = [0.2, 0.5, 0.8]
-    population_list = [10, 20, 50]
-    generation_list = [25, 100, 500]
+def cartpole_main():
+    crossover_list = [0.9]
+    mutation_list = [0.4]
+    population_list = [100]
+    generation_list = [20]
+
+
     for p in population_list:
         for g in generation_list:
             for c in crossover_list:
                 for m in mutation_list:
-                    path = os.path.join(PATH_RESULTS_GENETIC_WALKER,f'POPULATION={p}_MAX-GEN={g}_CROS_RATE={c}_MUT-RATE_{m}')  
+                    path = os.path.join(PATH_RESULTS_GENETIC_CARTPOLE,f'POPULATION={p}_MAX-GEN={g}_CROS_RATE={c}_MUT-RATE_{m}')  
                     old_population = [Individual() for _ in range(p)]
                     new_population = [None] * p
                     json_results = {}
@@ -226,6 +228,6 @@ def walker_main():
                         f.close()
                     best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
                     run_individual(best_model.model, num_episodes=EPISODES, render=True)
-                    genetic_utils.plotStatistics(json_results, WALKER, g, p, c, m)
+                    genetic_utils.plotStatistics(json_results, CARTPOLE, g, p, c, m)
 
-    bipedalWalker.end()
+    cartPole.end()

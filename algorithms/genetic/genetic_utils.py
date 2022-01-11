@@ -56,7 +56,10 @@ def plotStatistics(data, game , generation=GENERATIONS, population=POPULATION_SI
     plt.legend()
     if game == WALKER:
         plt.savefig(os.path.join(PATH_RESULTS_GENETIC_WALKER, f"POP={population}_GEN={generation}_CROS={crossover}_MUT={mutation}_results.png"))
-    else:
+    elif game == BREAKOUT:
         plt.savefig(os.path.join(PATH_RESULTS_GENETIC_BREAKOUT,'results.png'))
+    elif game == CARTPOLE:
+        plt.savefig(os.path.join(PATH_RESULTS_GENETIC_CARTPOLE, f"POP={population}_GEN={generation}_CROS={crossover}_MUT={mutation}_results.png"))
+
 
 

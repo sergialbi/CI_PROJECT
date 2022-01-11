@@ -13,8 +13,6 @@ import algorithms.genetic.genetic_utils as genetic_utils
 from environments.CartPole import CartPole
 
 cartPole = CartPole(0.1)
-env = gym.make(WALKER)
-env.seed(256)
 
 class Individual:
     def __init__(self, model=None):
@@ -194,7 +192,7 @@ def cartpole_main():
         for g in generation_list:
             for c in crossover_list:
                 for m in mutation_list:
-                    path = os.path.join(PATH_RESULTS_GENETIC_WALKER,f'POPULATION={p}_MAX-GEN={g}_CROS_RATE={c}_MUT-RATE_{m}')  
+                    path = os.path.join(PATH_RESULTS_GENETIC_CARTPOLE,f'POPULATION={p}_MAX-GEN={g}_CROS_RATE={c}_MUT-RATE_{m}')  
                     old_population = [Individual() for _ in range(p)]
                     new_population = [None] * p
                     json_results = {}
@@ -230,6 +228,6 @@ def cartpole_main():
                         f.close()
                     best_model = sorted(new_population, key=lambda individual: individual.fitness, reverse=True)[0]
                     run_individual(best_model.model, num_episodes=EPISODES, render=True)
-                    genetic_utils.plotStatistics(json_results, WALKER, g, p, c, m)
+                    genetic_utils.plotStatistics(json_results, CARTPOLE, g, p, c, m)
 
     cartPole.end()

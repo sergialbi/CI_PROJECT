@@ -13,8 +13,6 @@ import algorithms.genetic.genetic_utils as genetic_utils
 from environments.BipedalWalker import BipedalWalker
 
 bipedalWalker = BipedalWalker(0.1)
-env = gym.make(WALKER)
-env.seed(256)
 
 class Individual:
     def __init__(self, model=None):

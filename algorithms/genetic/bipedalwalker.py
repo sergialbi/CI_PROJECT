@@ -184,15 +184,15 @@ def generation(old_population, new_population, render=False, cross_value=CROSSOV
 
 
 def walker_main():
-    crossover_list = [0.5]
-    mutation_list = [0.5]
-    population_list = [10]
-    generation_list = [100]
+    crossover_list = [0.3, 0.5, 0.85]
+    mutation_list = [0.2, 0.5, 0.8]
+    population_list = [10, 20, 50]
+    generation_list = [25, 100, 500]
     for p in population_list:
         for g in generation_list:
             for c in crossover_list:
                 for m in mutation_list:
-                    path = f'{PATH_RESULTS_GENETIC_WALKER}POPULATION={p}_MAX-GEN={g}_CROS_RATE={c}_MUT-RATE_{m}'    
+                    path = os.path.join(PATH_RESULTS_GENETIC_WALKER,f'POPULATION={p}_MAX-GEN={g}_CROS_RATE={c}_MUT-RATE_{m}')  
                     old_population = [Individual() for _ in range(p)]
                     new_population = [None] * p
                     json_results = {}

@@ -2,6 +2,7 @@ from constants.constants_general import *
 from constants.constants_dqn import *
 from environments.BipedalWalker import BipedalWalker
 from environments.Breakout import Breakout
+from environments.CartPole import CartPole
 
 import os
 import time
@@ -164,8 +165,9 @@ def get_state_batch(env_state, frame_diff=FRAME_DIFF):
     return torch.from_numpy(array).unsqueeze(0)
 
 
-def plot_screen_batch(screen, title=""):
-    img = screen[0].cpu().detach().numpy()[:, :, :3].transpose(1,2,0)
+def plot_state_batch(screen, title=""):
+    print(screen.shape)
+    img = screen[0].cpu().detach().numpy().transpose(1,2,0)[:, :, -1]
     plt.imshow(img)
     plt.title(title)
     plt.show()
@@ -183,7 +185,7 @@ def create_dqn(env, model=selected_model, frame_size=FRAME_SIZE, memory_size=MEM
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
 
-    optimizer = optim.RMSprop(policy_net.parameters(), lr=LR, momentum=MOMENTUM)  # Create RMS optimizer
+    optimizer = optim.RMSprop(policy_net.parameters(), lr=LR, momentum=MOMENTUM, eps=MIN_SQR_GRAD)  # Create RMS optimizer
     memory = ReplayMemory(memory_size)  # Create replay memory for batches
 
     dqn_tuple = policy_net, target_net, optimizer, memory # Group all variable in a tuple
@@ -192,26 +194,27 @@ def create_dqn(env, model=selected_model, frame_size=FRAME_SIZE, memory_size=MEM
 
 
 # ----------- TRAINING ----------- #
-def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCHS_PER_TARGET_UPD, device=DEVICE):
+def train_dqn(dqn_tuple, env, num_episodes=NUM_EPISODES, device=DEVICE):
     policy_net, target_net, optimizer, memory = dqn_tuple   # Extract variables from tuple
-    policy_net.train()    
+    policy_net.train()
     
     steps_done = 0
-    epochs_rewards = np.zeros(num_epochs)
-    for epoch in range(num_epochs):        
+    episodes_rewards = np.zeros(num_episodes)
+    for episode in range(num_episodes):        
         # Initialize the environment and state
-        env_state = env.start()
+        env_state = env.start()        
         state = get_state_batch(env_state)
 
-        # Start epoch loop
-        epoch_reward = 0
+        # Start episode loop
+        episode_reward = 0
         done = False
+        start_steps = steps_done
         while not done:
-            # Select and perform an action
+            # Select and perform an action            
             steps_done += 1
             action = select_action(state, policy_net, steps_done)
             env_state, reward, done = env.step(action.item())
-            epoch_reward += reward
+            episode_reward += reward
             reward = torch.tensor([reward])
 
             # Observe new state            
@@ -224,22 +227,23 @@ def train_dqn(dqn_tuple, env, num_epochs=NUM_EPOCHS, epochs_per_target_upd=EPOCH
             memory.push(state, action, next_state, reward)
 
             # Move to the next state
-            state = next_state
+            state = next_state            
 
-            # Perform one step of the optimization (on the target network)
-            optimize_model(policy_net, target_net, memory, optimizer)
-
-        # When epoch completed, store reward
-        epochs_rewards[epoch] = epoch_reward
+            # Perform one step of the optimization (with target network as reference)
+            if steps_done > STEPS_BEFORE_START_LEARNING and steps_done % STEPS_PER_POLICY_UPD == 0:
+                optimize_model(policy_net, target_net, memory, optimizer)
             
         # Update the target network, copying all weights and biases in DQN
-        if epoch % epochs_per_target_upd == 0:
+        if steps_done > STEPS_BEFORE_START_LEARNING and episode % EPOCHS_PER_TARGET_UPD == 0:
             target_net.load_state_dict(policy_net.state_dict())
-        
-        # Print epoch information
-        print(f"Epoch {epoch+1}/{num_epochs} with a reward of {epoch_reward}")
 
-    return epochs_rewards
+        # When episode completed, store reward
+        episodes_rewards[episode] = episode_reward        
+        
+        # Print episode information
+        print(f"Epoch {episode+1}/{num_episodes} | {steps_done-start_steps} steps with a reward of {episode_reward}")
+
+    return episodes_rewards
 
 
 def select_action(state, policy_net, steps_done, eps_start=EPS_START, eps_end=EPS_END, eps_decay=EPS_DECAY, device=DEVICE):
@@ -296,7 +300,7 @@ def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):
     non_final_next_states = non_final_next_states.to(device)
     next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0].detach()
     # Compute the expected Q values
-    expected_state_action_values = (next_state_values * GAMMA) + reward_batch
+    expected_state_action_values = reward_batch + GAMMA * next_state_values
 
     # Compute Huber loss
     loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
@@ -317,13 +321,15 @@ def store_rewards(rewards, game_name):
         folder = PATH_RESULTS_DQN_WALKER
     elif game_name == BREAKOUT:
         folder = PATH_RESULTS_DQN_BREAKOUT
+    elif game_name == CARTPOLE:
+        folder = PATH_RESULTS_DQN_CARTPOLE
     
     # Create folder if it does not exist
     if not os.path.exists(folder):
         os.makedirs(folder)
     
     # Get filename and path
-    filename = f"rewards_{game_name}_{time.strftime('%Y%m%d-%H%M%S')}.npy"
+    filename = f"rewards_{game_name}_{time.strftime('%Y%m%d-%H%M%S')}_{SELECTED_MODEL}.npy"
     path = os.path.join(folder, filename)
 
     # Store
@@ -357,7 +363,7 @@ def plot_rewards(rewards, title, num_avg_points=10, img_filepath=None):
     last_idx = 0
     for i, real_idx in enumerate(avg_indexes):
         if last_idx == real_idx:
-            average_rewards[i] = 0
+            average_rewards[i] = rewards[real_idx]
         else:
             average_rewards[i] = np.mean(rewards[last_idx:real_idx])
         last_idx = real_idx
@@ -367,7 +373,7 @@ def plot_rewards(rewards, title, num_avg_points=10, img_filepath=None):
     plt.plot(avg_indexes, average_rewards, color="orange", label=f"Mean for each {avg_divisor} rewards")
     plt.title(title)
     plt.legend()
-    plt.xlabel("Epoch")
+    plt.xlabel("Episode")
     plt.ylabel("Reward")
 
     # Store image if necessary
@@ -384,6 +390,8 @@ def run_dqn(game_name):
         env = BipedalWalker(reward_scale=1)
     elif game_name == BREAKOUT:
         env = Breakout(NUM_STACKED_FRAMES, FRAME_SIZE, reward_scale=1, only_right_left=False)
+    elif game_name == CARTPOLE:
+        env = CartPole(reward_scale=1, num_stacked=NUM_STACKED_FRAMES, frame_resize=FRAME_SIZE)
     else:
         raise Exception(f"Game name {game_name} not recognized")
 
@@ -394,9 +402,12 @@ def run_dqn(game_name):
     dqn_tuple = create_dqn(env)
     
     print("Training...")
-    start_time = time.time()
     rewards = train_dqn(dqn_tuple, env)
-    print(f"Training finished in {time.time()-start_time} seconds")
+
+    print("Storing models")
+    policy_net, target_net, optimizer, memory = dqn_tuple   # Extract variables from tuple
+    torch.save(policy_net.state_dict(), os.path.join(PATH_RESULTS_DQN,f"policy_{SELECTED_MODEL}_net.chkp"))
+    torch.save(target_net.state_dict(), os.path.join(PATH_RESULTS_DQN,f"target_{SELECTED_MODEL}_net.chkp"))
     
     print("Storing rewards...")
     filepath = store_rewards(rewards, game_name)

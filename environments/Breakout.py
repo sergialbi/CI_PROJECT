@@ -8,9 +8,10 @@ from constants.constants_general import BREAKOUT
 
 class Breakout:
 
-    def __init__(self, num_stacked, frame_resize, noop_actions=10, reward_scale=0.01, render=False):
+    def __init__(self, num_stacked, frame_resize, noop_actions=10, reward_scale=0.01, render=False, only_right_left=True):
         self.env = gym.make(BREAKOUT)
         self.render = render
+        self.only_right_left = only_right_left
         
         self.reward_scale = reward_scale
         
@@ -78,7 +79,8 @@ class Breakout:
 
     def step(self, action):
         # Actions will be either 0 or 1. Add 2 to become RIGHT and LEFT
-        action = action + 2
+        if self.only_right_left:
+            action = action + 2
 
         if self.render: 
             self.env.render()

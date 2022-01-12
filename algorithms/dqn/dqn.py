@@ -258,11 +258,10 @@ def select_action(state, policy_net, steps_done, eps_start=EPS_START, eps_end=EP
     # Otherwise, use the policy net
     else:
         with torch.no_grad():
-            state_at_device = state.to(device)
             # t.max(1) will return largest column value of each row.
             # second column on max result is index of where max element was
             # found, so we pick action with the larger expected reward.
-            action = policy_net(state_at_device).max(1)[1].view(1, 1)
+            action = policy_net(state.to(device)).max(1)[1].view(1, 1)
     
     return action
 

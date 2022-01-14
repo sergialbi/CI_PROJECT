@@ -182,10 +182,10 @@ def generation(old_population, new_population, render=False, cross_value=CROSSOV
 
 
 def cartpole_main():
-    crossover_list = [0.9]
-    mutation_list = [0.4]
-    population_list = [100]
-    generation_list = [20]
+    crossover_list = [0.3, 0.5, 0.85]
+    mutation_list = [0.2, 0.5, 0.8]
+    population_list = [10, 20, 50]
+    generation_list = [25, 100, 500]
 
 
     for p in population_list:

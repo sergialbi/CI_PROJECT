@@ -173,8 +173,8 @@ def selection(population, select_type = "roulette"):
         parent1, parent2 = sorted_individuals[0], sorted_individuals[1]
 
     elif select_type == "roulette":
-        all_fitness = np.sum([individual.fitness for individual in population])
-        probs = [individual.fitness / all_fitness for individual in population]
+        all_fitness = np.sum([zero_fitness(individual.fitness) for individual in population])
+        probs = [zero_fitness(individual.fitness) / all_fitness for individual in population]
         ind1 = np.random.choice(len(population), p=probs)
         ind2 = np.random.choice(len(population), p=probs)
         parent1, parent2 = population[ind1], population[ind2]
@@ -184,6 +184,8 @@ def selection(population, select_type = "roulette"):
     return parent1, parent2
 
 
+def zero_fitness(fitness):
+    return fitness if fitness > 0 else 0.0000001
 
 def generation(old_population, new_population, render=False, cross_value=CROSSOVER_RATE, mut_value = MUTATION_RATE):
     """
@@ -232,7 +234,7 @@ def walker_main():
     # Define some list of parameters to test them
     crossover_list = [0.4, 0.8]
     mutation_list = [0.4, 0.8]
-    population_list = [50, 100] # must be even
+    population_list = [50] # must be even
     generation_list = [100, 200]
 
     # For every defined combination

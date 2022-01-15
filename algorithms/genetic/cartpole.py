@@ -255,14 +255,14 @@ def cartpole_main():
                         # Save best model
                         if max > max_old_fitness:
                             max_old_fitness = max
-                            torch.save(best_model.model.state_dict(), results_path + "_dict.pt")
-                            torch.save(best_model.model, results_path + "_model.pt")
+                            #torch.save(best_model.model.state_dict(), results_path + "_dict.pt")
+                            #torch.save(best_model.model, results_path + "_model.pt")
                         
                         stats = {"mean":mean, "min": min,  "max": max}
                         stats_log = f"Mean: {mean} min: {min} max: {max}\n"
-                        with open(results_path + '.log', "a") as f:
-                            f.write(stats_log)
-                            f.close()
+                        #with open(results_path + '.log', "a") as f:
+                        #    f.write(stats_log)
+                        #    f.close()
                         print("Generation: ", gen, stats)
                         json_results[str(gen)] = stats
                     

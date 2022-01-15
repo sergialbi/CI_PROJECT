@@ -159,7 +159,7 @@ def compute_stats(population):
     return mean, min, max
 
 
-def selection(population, select_type = "ranked"):
+def selection(population, select_type = "roulette"):
     """
     Performs a selection of the parents from the current population
     @param population: list of individuals

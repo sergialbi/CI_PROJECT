@@ -36,6 +36,20 @@ First of all, you will need to install the following libraries to execute our co
   Select game: w (Bipedal Walker) - c (CartPole)
   ```
 
+* Step 4.2 (only with PPO): Select if you want to either train or test the algorithm with the selected environment.
+
+  ```
+  Select mode: t (training) - p (test)
+  ```
+
+  To test you will need to uncomment the best found parameters, which can be found in constants/contants_ppo.py
+
 * Step 5: Wait for the execution to finish
 
 Results can be found on results folder.
+
+Also, you can use tensorbord to visualize the training curves for each environment. To do it, you need to open a 
+terminal in the results/ppo folder, and type
+```
+tensorbord --logdir CartPole-v1 (or BipedalWalker-v3) 
+```

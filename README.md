@@ -38,4 +38,4 @@ First of all, you will need to install the following libraries to execute our co
 
 * Step 5: Wait for the execution to finish
 
-Results can be found on folder results.
+Results can be found on results folder.

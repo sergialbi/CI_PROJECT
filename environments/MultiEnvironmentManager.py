@@ -2,127 +2,87 @@ from multiprocessing import Process, Pipe
 import numpy as np
 
 
-def environment_worker_function(env_function, pipe_end, **env_params):
-    environment = env_function(**env_params)
+class Environment(Process):
 
-    state = environment.start()
+    def __init__(self, env_index, pipe_end, env_function, **env_params):
+        super().__init__()
+        self.env = env_function(**env_params)
+        self.env_index = env_index
+        self.pipe_end = pipe_end
 
-    while True:
-        (msg, data) = pipe_end.recv()
+    def run(self):
+        super().run()
+        state = self.env.start()
+        self.pipe_end.send(state)
 
-        if msg == "start":
-            pipe_end.send(("start", state))
+        while True:
+            action = self.pipe_end.recv()
+            state, reward, done = self.env.step(action)
 
-        elif msg == "step":
-            action = data
-            next_state, reward, terminal = environment.step(action)
-            if terminal:
-                next_state = environment.start()
-            pipe_end.send(("step", (next_state, reward, terminal)))
-
-        elif msg == "random_action":
-            random_action = environment.random_action()
-            pipe_end.send("random_action", random_action)
-
-        elif msg == "end":
-            pipe_end.close()
-            environment.end()
-            break
-
-        elif msg == "get_state_shape":
-            state_shape = environment.get_state_shape()
-            pipe_end.send(("state_shape", state_shape))
-        
-        elif msg == "get_action_space":
-            action_space = environment.get_action_space()
-            pipe_end.send(("action_space", action_space))
-
-        else:
-            raise ValueError(msg)
+            if done:
+                state = self.env.start()
+            
+            self.pipe_end.send([state, reward, done])
 
 
 class MultiEnvironmentManager:
 
     def __init__(self, env_function, num_envs, **env_params):
         self.num_envs = num_envs
-        self.pipes_main, self.pipes_subprocess = zip(*[Pipe() for _ in range(num_envs)])
-        self.envs = [Process(target = environment_worker_function, args = (env_function, self.pipes_subprocess[i]), 
-            kwargs = env_params) for i in range(self.num_envs)]
+        self.pipes_main = []
+        self.pipes_subprocess = []
+        self.envs = []
 
-        self.__initialize_subprocesses()
-        self.__configure_state_space()
-        self.__configure_action_space()
-
-
-    def __initialize_subprocesses(self):
-        for env in self.envs:
-            env.daemon = True
+        for i in range(num_envs):
+            pipe_main, pipe_subprocess = Pipe()
+            env = Environment(i, pipe_subprocess, env_function, **env_params)
             env.start()
+            
+            self.pipes_main.append(pipe_main)
+            self.pipes_subprocess.append(pipe_subprocess)
+            self.envs.append(env)
 
+            self.configure_spaces(env_function, **env_params) 
 
-    def __configure_state_space(self):
-        self.pipes_main[0].send(("get_state_shape", None))
-        (_, self.state_shape) = self.pipes_main[0].recv()
+    def configure_spaces(self, env_function, **env_params):
+        temp_env = env_function(**env_params)
+        self.state_shape = temp_env.get_state_shape()
+        self.action_space = temp_env.get_action_space()
+        self.max_steps = temp_env.env._max_episode_steps
+        temp_env.end()
 
-
-    def __configure_action_space(self):
-        self.pipes_main[0].send(("get_action_space", None))
-        (_, self.action_space) = self.pipes_main[0].recv()
-
+    def end(self):
+        for env in self.envs:
+            env.terminate()
+            env.join()
 
     def start(self):
         states = np.zeros((self.num_envs, *self.state_shape))
-        for pipe_main in self.pipes_main:
-            pipe_main.send(("start", None))
-
-        for i in range(self.num_envs):
-            (_, state) = self.pipes_main[i].recv()
-            states[i] = state
-
+        for i in range(len(self.pipes_main)):
+            states[i] = self.pipes_main[i].recv()
         return states
-
-
-    def end(self):
-        for pipe_main in self.pipes_main:
-            pipe_main.send(("end", None))
-
-        for env_process in self.envs:
-            env_process.join()
-
 
     def step(self, actions):
         for pipe_main, action in zip(self.pipes_main, actions):
-            pipe_main.send(("step", action))
+            pipe_main.send(action)
 
         next_states = np.zeros((self.num_envs, *self.state_shape))
         rewards = np.zeros((self.num_envs))
         terminals = np.zeros((self.num_envs), dtype = bool)
 
         for i in range(len(self.pipes_main)):
-            (_, data) = self.pipes_main[i].recv()
-            (next_state, reward, terminal) = data
+            [next_state, reward, terminal] = self.pipes_main[i].recv()
             next_states[i] = next_state
             rewards[i] = reward
             terminals[i] = terminal
 
         return next_states, rewards, terminals
 
-    
-    def random_actions(self):
-        for pipe_main in self.pipes_main:
-            pipe_main.send(("random_action", None))
-
-        actions = []
-        for pipe_main in self.pipes_main:
-            (_, action) = pipe_main.recv()
-            actions.append(action)
-
-        return actions
-
-
     def get_state_shape(self):
         return self.state_shape
 
-
     def get_action_space(self):
         return self.action_space
+
+    def get_max_steps(self):
+        return self.max_steps

@@ -233,9 +233,9 @@ def train_dqn(dqn_tuple, env, num_episodes=NUM_EPISODES, device=DEVICE):
             if steps_done > STEPS_BEFORE_START_LEARNING and steps_done % STEPS_PER_POLICY_UPD == 0:
                 optimize_model(policy_net, target_net, memory, optimizer)
             
-        # Update the target network, copying all weights and biases in DQN
-        if steps_done > STEPS_BEFORE_START_LEARNING and episode % EPOCHS_PER_TARGET_UPD == 0:
-            target_net.load_state_dict(policy_net.state_dict())
+            # Update the target network, copying all weights and biases from policy DQN
+            if steps_done > STEPS_BEFORE_START_LEARNING and steps_done % STEPS_PER_TARGET_UPD == 0:
+                target_net.load_state_dict(policy_net.state_dict())
 
         # When episode completed, store reward
         episodes_rewards[episode] = episode_reward        
@@ -299,7 +299,7 @@ def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):
     non_final_next_states = non_final_next_states.to(device)
     next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0].detach()
     # Compute the expected Q values
-    expected_state_action_values = reward_batch + GAMMA * next_state_values
+    expected_state_action_values = (1-GAMMA) * reward_batch + GAMMA * next_state_values
 
     # Compute Huber loss
     loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))

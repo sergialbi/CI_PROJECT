@@ -1,120 +1,102 @@
+import os
 import tensorflow as tf
 from tensorflow import keras
-from abc import ABC, abstractmethod
-from algorithms.PPO.PPO_utils import *
+from keras import backend as K
+from algorithms.PPO.PPO_utils import DiscreteActorCritic, ContinuousActorCritic
 
 
-class __PPOModel(ABC):
+class __PPOModel:
     
-    def __init__(self, state_shape, action_space, epsilon, learning_rate, gradient_clipping):
+    def __init__(self, epsilon, learning_rate, gradient_clipping, max_kl_diverg):
+        self.original_epsilon = epsilon
+        self.original_learning_rate = learning_rate
         self.epsilon = epsilon
         self.learning_rate = learning_rate
         self.gradient_clipping = gradient_clipping
-        self.actor_optimizer = keras.optimizers.Adam(learning_rate)
-        self.critic_optimizer = keras.optimizers.Adam(learning_rate)
-        self.init_models(state_shape, action_space)
+        self.optimizer = keras.optimizers.Adam(learning_rate)
+        self.max_kl_diverg = max_kl_diverg
+            
 
-
-    def init_models(self, state_shape, action_space):
-        self.actor = build_actor(state_shape, action_space)
-        self.critic = build_critic(state_shape)
-
-
-    def load_models(self, checkpoint_path):
-        self.actor = None
-        self.critic = None
-
-
-    @abstractmethod
     def forward(self, states):
-        pass
+        actions, actions_log_prob, state_values = self.model(states)
+        return actions.numpy(), actions_log_prob.numpy(), state_values.numpy()
 
-    @abstractmethod
-    def compute_actor_loss(self, tape, states, actions, advantages, actions_old_log_prob):
-        pass
+    
+    def get_actions_log_prob(self, states, actions):
+        return self.model.get_actions_log_probs(states, actions)
 
 
-    def update_actor(self, states, actions, advantages, actions_old_log_prob):
+    def apply_annealing(self, annealing_fraction):
+        self.epsilon = self.original_epsilon*annealing_fraction
+        self.learning_rate = self.original_learning_rate*annealing_fraction
+        K.set_value(self.optimizer.learning_rate, self.learning_rate)
+
+
+    def compute_losses(self, tape, states, actions, advantages, returns, actions_old_log_prob, old_values):
+        with tape:
+
+            actions_log_prob, state_values = self.model.call_update(states, actions)
+           
+            ratios = tf.exp(actions_log_prob - actions_old_log_prob)
+
+            clip_surrogate = tf.clip_by_value(ratios, 1-self.epsilon, 1+self.epsilon)*advantages
+            actor_loss = tf.reduce_mean(tf.minimum(ratios*advantages, clip_surrogate))
+
+            state_values_clipped = old_values + tf.clip_by_value(state_values - old_values, -self.epsilon, self.epsilon)
+            critic_loss_unclipped = (returns - state_values)**2
+            critic_loss_clipped = (returns - state_values_clipped)**2
+            
+            critic_loss = 0.5 * tf.reduce_mean(tf.maximum(critic_loss_clipped, critic_loss_unclipped))
+
+            kl_diverg = tf.reduce_mean(actions_old_log_prob - actions_log_prob)
+            loss = -actor_loss + critic_loss
+
+            #loss = tf.where(kl_diverg > self.max_kl_diverg, tf.stop_gradient(loss), loss)
+
+        return loss, actor_loss, critic_loss, kl_diverg
+
+
+    def update_model(self, states, actions, advantages, returns, actions_old_log_prob, old_values):
         tape = tf.GradientTape()
-        loss = self.compute_actor_loss(tape, states, actions, advantages, actions_old_log_prob)
+        loss, actor_loss, critic_loss, kl_divergence = self.compute_losses(tape, states, actions, advantages, returns,
+            actions_old_log_prob, old_values)
 
-        trainable_variables = self.actor.trainable_variables
+        trainable_variables = self.model.trainable_variables
         gradients = tape.gradient(loss, trainable_variables)
-        #gradients, _ = tf.clip_by_global_norm(gradients, self.gradient_clipping)       
-        self.actor_optimizer.apply_gradients(zip(gradients, trainable_variables))
+
+        has_nans = tf.reduce_any([tf.reduce_any(tf.math.is_nan(grad)) for grad in gradients])
+        if has_nans:
+            print("NANs!")
+            print(loss, actor_loss, critic_loss, kl_divergence)
+
+        gradients, _ = tf.clip_by_global_norm(gradients, self.gradient_clipping)       
+        self.optimizer.apply_gradients(zip(gradients, trainable_variables))
  
-        return loss
+        return actor_loss, critic_loss, kl_divergence, self.optimizer.get_config()['learning_rate']
 
 
-    def update_critic(self, states, returns):
-        with tf.GradientTape() as tape:
-            values = self.critic(states)
-            loss = keras.losses.MSE(returns, tf.squeeze(values, axis=-1))
-        
-        trainable_variables = self.critic.trainable_variables
-        gradients = tape.gradient(loss, trainable_variables)
-        #gradients, _ = tf.clip_by_global_norm(gradients, self.gradient_clipping)       
-        self.critic_optimizer.apply_gradients(zip(gradients, trainable_variables))
+    def are_models_saved(self):
+        files = os.listdir(self.models_path)
+        return len([file_name for file_name in files 
+            if file_name.startswith('actor_weights') or file_name.startswith('critic_weights')]) > 0
 
-        return loss
+    def load_models(self, models_path):
+        if "checkpoint" in os.listdir(models_path):
+            self.model.load_weights(f'{models_path}/models_weights') 
 
-
-    def save_models(self, path):
-        self.actor.save_weights(f'{path}_actor_weights')
-        self.critic.save_weights(f'{path}_critic_weights')
+    def save_models(self, models_path):
+        self.model.save_weights(f'{models_path}/models_weights')
 
 
 class DiscretePPOModel(__PPOModel):
 
-    def __init__(self, state_shape, action_space, epsilon, learning_rate, gradient_clipping):
-        super().__init__(state_shape, action_space, epsilon, learning_rate, gradient_clipping)
-    
-    
-    def forward(self, states):
-        values = tf.squeeze(self.critic(states), axis=-1)
-        prob_dists = self.actor(states)
-        actions = sample_from_categoricals(prob_dists)
-        actions_prob = select_values_of_2D_tensor(prob_dists, actions)
-        actions_log_prob = compute_log_of_tensor(actions_prob)
-        return values.numpy(), actions.numpy(), actions_log_prob.numpy()
-
-
-    def compute_actor_loss(self, tape, states, actions, advantages, actions_old_log_prob):
-        with tape:
-            prob_dists = self.actor(states)
-            actions_prob = select_values_of_2D_tensor(prob_dists, actions)
-            actions_log_prob = compute_log_of_tensor(actions_prob)
-            ratios = tf.exp(actions_log_prob - actions_old_log_prob)
-            clip_surrogate = tf.clip_by_value(ratios, 1 - self.epsilon, 1 + self.epsilon)*advantages
-            loss = tf.minimum(ratios*advantages, clip_surrogate)            
-            loss = -tf.reduce_mean(loss)
-        return loss
+    def __init__(self, state_shape, num_actions, epsilon, learning_rate, gradient_clipping, max_kl_diverg):
+        self.model = DiscreteActorCritic(num_actions)
+        super().__init__(epsilon, learning_rate, gradient_clipping, max_kl_diverg)
 
 
 class ContinuousPPOModel(__PPOModel):
 
-    def __init__(self, state_shape, action_space, epsilon, learning_rate, gradient_clipping):
-        super().__init__(state_shape, action_space, epsilon, learning_rate, gradient_clipping)
-        self.min_action = action_space.low
-        self.max_action = action_space.high
-
-
-    def forward(self, states):
-        values = tf.squeeze(self.critic(states), axis = -1)
-        mus, log_sigmas = self.actor(states)
-        actions = tf.clip_by_value(sample_from_gaussians(mus, log_sigmas), self.min_action, self.max_action)
-        actions_prob = compute_pdf_of_gaussian_samples(mus, log_sigmas, actions)
-        actions_log_prob = compute_log_of_tensor(actions_prob)
-        return values.numpy(), actions.numpy(), actions_log_prob.numpy()
-
-
-    def compute_actor_loss(self, tape, states, actions, advantages, actions_old_log_prob):
-        with tape:
-            mus, log_sigmas = self.actor(states)
-            actions_prob = compute_pdf_of_gaussian_samples(mus, log_sigmas, actions)
-            actions_log_prob = compute_log_of_tensor(actions_prob)
-            ratios = tf.exp(actions_log_prob - actions_old_log_prob)
-            clip_surrogate = tf.clip_by_value(ratios, 1 - self.epsilon, 1 + self.epsilon)*advantages
-            loss = tf.minimum(ratios*advantages, clip_surrogate)
-            loss = -tf.reduce_mean(loss)
-            return loss
+    def __init__(self, state_shape, action_space, epsilon, learning_rate, gradient_clipping, max_kl_diverg):
+        self.model = ContinuousActorCritic(action_space.shape[0], action_space.low, action_space.high)
+        super().__init__(epsilon, learning_rate, gradient_clipping, max_kl_diverg)

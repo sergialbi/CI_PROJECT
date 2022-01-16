@@ -1,7 +1,7 @@
 from constants.constants_general import *
 from algorithms.genetic.genetic_main import run_genetic
 from algorithms.dqn.dqn import run_dqn
-from algorithms.PPO.PPO_train import run_PPO
+from algorithms.PPO.PPO_run import train_PPO, test_PPO
 
 if __name__ == '__main__':
     # Select the algorithm to run
@@ -34,8 +34,19 @@ if __name__ == '__main__':
         
         if val == 1:
             run_dqn(game_name)
+
         elif val == 2:
-            run_PPO(game_name)
+            m = None
+            while m != "t" and m != "p":
+                m = input("Select mode: t (training) - p (test)\n")
+                if m != "t" and m != "p":
+                    print("Not a valid option\n")
+
+            if m == "t":
+                train_PPO(game_name)
+            elif m == "p":
+                test_PPO(game_name, render=False)
+
         elif val == 3:
             run_genetic(game_name)
 

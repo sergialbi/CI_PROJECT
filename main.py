@@ -29,7 +29,7 @@ if __name__ == '__main__':
                 g = input("Select game: w (Bipedal Walker) - c (CartPole)\n")
             if g != "w" and g != "b" and g != "c":
                 print("Not a valid option\n")
-            elif g == "w" and val == 1 or g == "b" and val == 2 or g == "b" and val == 3:
+            elif (g == "w" and val == 1) or (g == "b" and val == 2) or (g == "b" and val == 3):
                 print("Not a valid option\n")
                 g = "none"
                 

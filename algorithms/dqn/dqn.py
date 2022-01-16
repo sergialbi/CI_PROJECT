@@ -350,14 +350,12 @@ def plot_rewards(rewards, title, num_avg_points=10, img_filepath=None):
 # ----------- RUNNING METHOD ----------- #
 def run_dqn(game_name):
     # Get game environment
-    if game_name == WALKER:
-        env = BipedalWalker(reward_scale=1)
-    elif game_name == BREAKOUT:
+    if game_name == BREAKOUT:
         env = Breakout(NUM_STACKED_FRAMES, FRAME_SIZE, reward_scale=1, only_right_left=False)
     elif game_name == CARTPOLE:
         env = CartPole(reward_scale=1, num_stacked=NUM_STACKED_FRAMES, frame_resize=FRAME_SIZE)
     else:
-        raise Exception(f"Game name {game_name} not recognized")
+        raise Exception(f"Game {game_name} not compatible with DQN")
 
     # Perform procedure
     print(f"Selected device = {DEVICE}")

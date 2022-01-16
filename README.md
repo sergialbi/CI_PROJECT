@@ -51,5 +51,5 @@ Results can be found in the results folder.
 Also, you can use tensorboard to visualize the training curves for each environment with PPO. To do it, you need to open a 
 terminal in the results/ppo folder, and type
 ```
-tensorbord --logdir CartPole-v1 (or BipedalWalker-v3) 
+tensorboard --logdir CartPole-v1 (or BipedalWalker-v3) 
 ```

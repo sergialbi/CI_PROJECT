@@ -51,7 +51,7 @@ class __PPOModel:
             kl_diverg = tf.reduce_mean(actions_old_log_prob - actions_log_prob)
             loss = -actor_loss + critic_loss
 
-            #loss = tf.where(kl_diverg > self.max_kl_diverg, tf.stop_gradient(loss), loss)
+            loss = tf.where(tf.abs(kl_diverg) > self.max_kl_diverg, tf.stop_gradient(loss), loss)
 
         return loss, actor_loss, critic_loss, kl_diverg
 

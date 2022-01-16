@@ -22,13 +22,10 @@ First of all, you will need to install the following libraries to execute our co
 * Step 3: The following messages will appear on your terminal. Select the option that you want to execute. 
 
   ```
-  0: create folders
   1: run Deep Q Learning algorithm
   2: run PPO algorithm
   3: run Genetic algorithm
   ```
-
-  ***Note**: If it is your first time you will need to execute first the option 0* 
 
 * Step 4: Once the option is selected, select the environment that you prefer to use to execute the selected algorithm.
 

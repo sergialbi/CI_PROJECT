@@ -8,7 +8,7 @@ NUM_EPISODES = 3000
 
 # Reference hyperparameters: https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
 
-"""
+
 # For Breakout
 FRAME_SIZE = (84, 84)
 FRAME_DIFF = False
@@ -32,9 +32,9 @@ EPS_END = 0.1
 EPS_DECAY = 1000000
 
 STEPS_BEFORE_START_LEARNING = 10000
+
+
 """
-
-
 # For CartPole
 FRAME_SIZE = (84, 84)
 FRAME_DIFF = False
@@ -58,3 +58,4 @@ EPS_END = 0.1
 EPS_DECAY = 500
 
 STEPS_BEFORE_START_LEARNING = 10000
+"""

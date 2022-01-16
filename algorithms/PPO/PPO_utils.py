@@ -41,8 +41,11 @@ class ContinuousActorCritic(keras.Model):
     def __init__(self, action_size, min_action, max_action):
         super().__init__()
         self.dense_1 = keras.layers.Dense(512, activation="relu")
+        self.batch_1 = keras.layers.BatchNormalization()
         self.dense_2 = keras.layers.Dense(256, activation="relu")
+        self.batch_2 = keras.layers.BatchNormalization()
         self.dense_3 = keras.layers.Dense(64, activation="relu")
+        self.batch_3 = keras.layers.BatchNormalization()
 
         self.mu = keras.layers.Dense(action_size, activation='tanh')
         self.state_value = keras.layers.Dense(1)
@@ -55,8 +58,11 @@ class ContinuousActorCritic(keras.Model):
 
     def common(self, states):
         output_1 = self.dense_1(states)
+        output_1 = self.batch_1(output_1)
         output_2 = self.dense_2(output_1)
+        output_2 = self.batch_2(output_2)
         output_3 = self.dense_3(output_2)
+        output_3 = self.batch_3(output_3)
         state_values = self.state_value(output_3)
         mus = self.mu(output_2)
         state_values = tf.squeeze(state_values, axis=-1)

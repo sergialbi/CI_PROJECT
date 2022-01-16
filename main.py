@@ -21,7 +21,12 @@ if __name__ == '__main__':
         # Select the game
         g = "none"
         while g != "w" and g != "b" and g != "c":
-            g = input("Select game: w (Bipedal Walker) - b (Breakout) - c (CartPole)\n")
+            if val == 1:
+                g = input("b (Breakout) - c (CartPole)\n")
+            elif val == 2:
+                g = input("Select game: w (Bipedal Walker) -  c (CartPole)\n")
+            elif val == 3:
+                g = input("Select game: w (Bipedal Walker) - c (CartPole)\n")
             if g != "w" and g != "b" and g != "c":
                 print("Not a valid option\n")
         

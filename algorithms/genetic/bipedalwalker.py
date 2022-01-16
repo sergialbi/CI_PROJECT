@@ -232,10 +232,10 @@ def walker_main():
     Creates the population, makes the generations and selects the best model. Finally it prints the results and saves the model.
     """
     # Define some list of parameters to test them
-    crossover_list = [0.4, 0.8]
-    mutation_list = [0.4, 0.8]
-    population_list = [50] # must be even
-    generation_list = [100, 200]
+    crossover_list = [0.8]
+    mutation_list = [0.6]
+    population_list = [100] # must be even
+    generation_list = [4000]
 
     # For every defined combination
     for p in population_list:

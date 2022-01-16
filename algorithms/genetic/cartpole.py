@@ -230,10 +230,10 @@ def cartpole_main():
     Creates the population, makes the generations and selects the best model. Finally it prints the results and saves the model.
     """
     # Define some list of parameters to test them
-    crossover_list = [0.2, 0.5, 0.8, 0.9]
-    mutation_list = [0.2, 0.4, 0.6, 0.8]
-    population_list = [10, 30, 50]  # must be even
-    generation_list = [5, 10, 25]
+    crossover_list = [0.8]
+    mutation_list = [0.6]
+    population_list = [50]  # must be even
+    generation_list = [25]
 
     # For every defined combination
     for p in population_list:

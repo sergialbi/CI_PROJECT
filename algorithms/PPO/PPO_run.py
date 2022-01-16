@@ -1,18 +1,13 @@
 from sys import path
 from constants.constants_ppo import *
-from constants.constants_general import BREAKOUT, CARTPOLE, WALKER, PATH_RESULTS_PPO_BREAKOUT, PATH_RESULTS_PPO_WALKER, PATH_RESULTS_PPO_CARTPOLE
+from constants.constants_general import CARTPOLE, WALKER, PATH_RESULTS_PPO_WALKER, PATH_RESULTS_PPO_CARTPOLE
 from algorithms.PPO.PPO_agent import DiscretePPOAgent, ContinuousPPOAgent
-from environments import BipedalWalker, Breakout, MultiEnvironmentManager, CartPole
+from environments import BipedalWalker, MultiEnvironmentManager, CartPole
 from algorithms.PPO.PPO_utils import PPOResults
 
 
 def create_environments(environment_name, num_envs=NUM_ENVS, render=False):
-    if environment_name is BREAKOUT:
-        env_params = {'num_stacked': FRAMES_STACKED, 'frame_resize': FRAMES_RESIZE, 'noop_actions': NOOP_ACTIONS, 
-            'reward_scale': REWARD_SCALE, 'render': render}
-        env_function = Breakout.Breakout
-    
-    elif environment_name is WALKER:
+    if environment_name is WALKER:
         env_params = {'reward_scale': REWARD_SCALE, 'render': render}
         env_function = BipedalWalker.BipedalWalker
 
@@ -24,9 +19,7 @@ def create_environments(environment_name, num_envs=NUM_ENVS, render=False):
 
 
 def get_models_path(environment_name):
-    if environment_name is BREAKOUT:
-        return PATH_RESULTS_PPO_BREAKOUT
-    elif environment_name is WALKER:
+    if environment_name is WALKER:
         return PATH_RESULTS_PPO_WALKER
     elif environment_name is CARTPOLE:
         return PATH_RESULTS_PPO_CARTPOLE
@@ -35,12 +28,7 @@ def get_models_path(environment_name):
 
 
 def create_agent(environment_name, buffer_size, state_shape, action_space):
-    if environment_name is BREAKOUT:
-        num_actions = action_space.n
-        agent = DiscretePPOAgent(state_shape, num_actions, buffer_size, NUM_ENVS, GAMMA, GAE_LAMBDA, EPSILON, 
-            EPOCHS, LEARNING_RATE, GRADIENT_CLIPPING, MAX_KL_DIVERG)
-
-    elif environment_name is WALKER:
+    if environment_name is WALKER:
         agent = ContinuousPPOAgent(state_shape, action_space, buffer_size, NUM_ENVS, GAMMA, GAE_LAMBDA, EPSILON, EPOCHS, 
             LEARNING_RATE, GRADIENT_CLIPPING, MAX_KL_DIVERG)
 
@@ -82,7 +70,7 @@ def train_PPO(environment_name):
                     print(f'Iteration {iteration}/{TRAIN_ITERATIONS}: Env {index}, Reward: {episode_reward},' + 
                         f' Last 50 Average: {average:.2f}')
 
-                    if average > best_average:
+                    if average >= best_average:
                         best_average = average
                         agent.save_models(save_path)
 

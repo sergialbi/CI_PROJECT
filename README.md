@@ -1,23 +1,25 @@
 # CI project
 
-## Dependences
+## Dependencies
 
-First of all you will need to install the following libraries for execute our code:
+First of all, you will need to install the following libraries to execute our code:
 
-* scickit-learn
+* scikit-learn
 * tensorflow
-* tensorflow probabilites
+* keras
+* tensorboard
+* tensorflow-probabilities
 * box2d
 * PyTorch
 * Gym
 
 ## How to execute our code
 
-* Step 1: Open folder CI_PROJECT and find main.py
+* Step 1: Open the folder CI_PROJECT and find main.py
 
 * Step 2: Write on your terminal py main.py
 
-* Step 3: The following messages will be appear on your terminal. Select the option that you want to execute. 
+* Step 3: The following messages will appear on your terminal. Select the option that you want to execute. 
 
   ```
   0: create folders
@@ -26,19 +28,14 @@ First of all you will need to install the following libraries for execute our co
   3: run Genetic algorithm
   ```
 
-  ***Note**: If its your first time you will need to execute first the option 0* 
+  ***Note**: If it is your first time you will need to execute first the option 0* 
 
-* Step 4: Once the option is selected the environment that you prefer use for execute algorithm will be asked.
+* Step 4: Once the option is selected, select the environment that you prefer to use to execute the selected algorithm.
 
   ```
   Select game: w (Bipedal Walker) - c (CartPole)
   ```
 
-* Step 5: Wait for finish of execution
+* Step 5: Wait for the execution to finish
 
-Results can find on folder Results. 
-
-
-
-
-
+Results can be found on folder results.

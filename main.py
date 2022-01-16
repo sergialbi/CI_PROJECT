@@ -22,13 +22,17 @@ if __name__ == '__main__':
         g = "none"
         while g != "w" and g != "b" and g != "c":
             if val == 1:
-                g = input("b (Breakout) - c (CartPole)\n")
+                g = input("Select game: b (Breakout) - c (CartPole)\n")
             elif val == 2:
                 g = input("Select game: w (Bipedal Walker) -  c (CartPole)\n")
             elif val == 3:
                 g = input("Select game: w (Bipedal Walker) - c (CartPole)\n")
             if g != "w" and g != "b" and g != "c":
                 print("Not a valid option\n")
+            elif g == "w" and val == 1 or g == "b" and val == 2 or g == "b" and val == 3:
+                print("Not a valid option\n")
+                g = "none"
+                
         
         if g == "w":
             game_name = WALKER

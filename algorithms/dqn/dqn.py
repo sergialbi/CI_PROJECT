@@ -86,47 +86,10 @@ class DQN_Big(nn.Module):
         return self.head(x)
 
 
-
-class DQN_Mod(nn.Module):
-    def __init__(self, height, width, n_outputs, kernel_size=5, stride=2):
-        super(DQN_Mod, self).__init__()
-        self.n_outputs = n_outputs
-
-        # Create convolutional layers
-        self.conv1 = nn.Conv2d(4, 16, kernel_size=kernel_size, stride=stride)
-        self.bn1 = nn.BatchNorm2d(16)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=kernel_size, stride=stride)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=kernel_size, stride=stride)
-        self.bn3 = nn.BatchNorm2d(32)
-
-        # Number of Linear input connections depends on output of conv2d layers
-        # and therefore the input image size, so here it is computed.
-        convw = conv2d_size_out(conv2d_size_out(conv2d_size_out(width)))
-        convh = conv2d_size_out(conv2d_size_out(conv2d_size_out(height)))
-        linear_input_size = convw * convh * 32
-
-        # Output layer (fully connected)
-        self.head = nn.Linear(linear_input_size, n_outputs)
-
-    def get_num_outputs(self):
-        return self.n_outputs
-
-    def forward(self, x):
-        """Called with either one element to determine next action, or a batch during optimization. Returns tensor([[left0exp,right0exp]...])."""
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = x.view(x.size(0), -1)   # Flatten except for batch
-        return self.head(x)
-
-
 # Get selected model
 selected_model = DQN
 if SELECTED_MODEL == "Big":
     selected_model = DQN_Big
-elif SELECTED_MODEL == "Mod":
-    selected_model = DQN_Mod
 
 
 # Auxiliar function
@@ -304,7 +267,7 @@ def optimize_model(policy_net, target_net, memory, optimizer, device=DEVICE):
     # Compute Huber loss
     loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
 
-    # Optimize the model
+    # Optimize the model (clamping the parameters for stability)
     optimizer.zero_grad()
     loss.backward()
     for param in policy_net.parameters():
@@ -337,21 +300,23 @@ def store_rewards(rewards, game_name):
     return path
 
 
-def plot_rewards_from_file(filepath, store_img=False):
-    results = np.load(filepath) # Load rewards array
-    
-    # Get filename as title
-    filename = os.path.basename(filepath)
-    filename, _ = os.path.splitext(filename)
+def plot_rewards_from_file(filepath, title=None, store_img=False):
+    results = np.load(filepath) # Load rewards array    
 
     # Get image file path if required
     img_filepath = None
     if store_img:
         base, ext = os.path.splitext(filepath)
-        img_filepath = base+".png"    
+        img_filepath = base+".png"
+    
+    # Get filename as title
+    if title is None:        
+        filename = os.path.basename(filepath)
+        filename, _ = os.path.splitext(filename)
+        title = filename
     
     # Plot the rewards and store the corresponding image if required
-    plot_rewards(results, filename, img_filepath=img_filepath)
+    plot_rewards(results, title, img_filepath=img_filepath)
 
 
 def plot_rewards(rewards, title, num_avg_points=10, img_filepath=None):
